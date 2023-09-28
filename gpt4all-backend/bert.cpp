@@ -546,7 +546,7 @@ struct bert_ctx * bert_load_from_file(const char *fname)
 
     // load hparams
     {
-        auto & hparams = model.hparams;
+        auto &hparams = model.hparams;
 
         bool ok = false;
         int keyidx;
@@ -594,7 +594,6 @@ struct bert_ctx * bert_load_from_file(const char *fname)
         auto & hparams = model.hparams;
 
         int keyidx = gguf_find_key(ggufctx, "tokenizer.ggml.model");
-
         if (keyidx == -1) {
             fprintf(stderr, "%s: tokenizer model not found!\n", __func__);
             return nullptr;
@@ -604,9 +603,7 @@ struct bert_ctx * bert_load_from_file(const char *fname)
             return nullptr;
         }
 
-
         int tokens_keyidx = gguf_find_key(ggufctx, "tokenizer.ggml.tokens");
-
         if (tokens_keyidx == -1) {
             fprintf(stderr, "%s: bert tokenizer vocab not found!\n", __func__);
             return nullptr;
@@ -635,13 +632,13 @@ struct bert_ctx * bert_load_from_file(const char *fname)
     auto &ctx = model.ctx;
 
 #if defined(DEBUG_BERT)
-    printf("%s: ggml ctx size = %6.2f MB\n", __func__, ctx_size / (1024.0 * 1024.0));
+    printf("%s: ggml ctx size = %6.2f MB\n", __func__, ggml_get_mem_size(ctx) / (1024.0 * 1024.0));
 #endif
 
     // prepare memory for the weights
     {
         const int n_layer = model.hparams.n_layer;
-        model.layers.reserve(n_layer);
+        model.layers.resize(n_layer);
 
         model.word_embeddings       = ggml_get_tensor(ctx, "token_embd.weight");
         model.token_type_embeddings = ggml_get_tensor(ctx, "token_types.weight");
@@ -853,7 +850,7 @@ std::string get_arch_name(gguf_context *ctx_gguf) {
     std::string arch_name;
     const int kid = gguf_find_key(ctx_gguf, "general.architecture");
     enum gguf_type ktype = gguf_get_kv_type(ctx_gguf, kid);
-    if (ktype != (GGUF_TYPE_STRING)) {
+    if (ktype != GGUF_TYPE_STRING) {
         throw std::runtime_error("ERROR: Can't get general architecture from gguf file.");
     }
     return gguf_get_val_str(ctx_gguf, kid);
@@ -879,7 +876,6 @@ DLL_EXPORT const char *get_build_variant() {
 }
 
 DLL_EXPORT bool magic_match(const char * fname) {
-
     struct ggml_context * ctx_meta = NULL;
     struct gguf_init_params params = {
         /*.no_alloc = */ true,
@@ -890,27 +886,7 @@ DLL_EXPORT bool magic_match(const char * fname) {
         return false;
 
     bool isValid = gguf_get_version(ctx_gguf) <= 2;
-    isValid = get_arch_name(ctx_gguf) != "bert" ? false : isValid;
-
-#ifdef GGML_USE_METAL
-    const int n_tensors = gguf_get_n_tensors(ctx_gguf);
-    for (int i = 0; i < n_tensors; i++) {
-        const char * name = gguf_get_tensor_name(ctx_gguf, i);
-        struct ggml_tensor * meta = ggml_get_tensor(ctx_meta, name);
-        switch(meta->type) {
-            // currently supported on Metal https://github.com/ggerganov/llama.cpp/blob/ae9663f1887513e152839e91f61c513075a19422/ggml-metal.m#L51-L55
-            case LLAMA_FTYPE_MOSTLY_F16:
-            case LLAMA_FTYPE_MOSTLY_Q2_K:
-            case LLAMA_FTYPE_MOSTLY_Q4_0:
-            case LLAMA_FTYPE_MOSTLY_Q6_K:
-            case LLAMA_FTYPE_MOSTLY_Q4_K_S:
-            case LLAMA_FTYPE_MOSTLY_Q4_K_M:
-                break;
-            default: // unsupported quant-type for Metal
-                isValid = false;
-        }
-    }
-#endif
+    isValid = isValid && get_arch_name(ctx_gguf) == "bert";
 
     gguf_free(ctx_gguf);
     return isValid;
