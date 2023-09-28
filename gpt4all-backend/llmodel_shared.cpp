@@ -179,10 +179,10 @@ std::vector<float> LLModel::embedding(const std::string &/*text*/)
     return std::vector<float>();
 }
 
-std::vector<LLModel::GPUDevice> LLModel::availableGPUDevices()
+std::vector<LLModel::GPUDevice> LLModel::allGPUDevices()
 {
 #if defined(GGML_USE_KOMPUTE)
-    std::vector<ggml_vk_device> vkDevices = ggml_vk_available_devices(0);
+    std::vector<ggml_vk_device> vkDevices = ggml_vk_all_devices(0);
 
     std::vector<LLModel::GPUDevice> devices;
     for(const auto& vkDevice : vkDevices) {
@@ -190,8 +190,10 @@ std::vector<LLModel::GPUDevice> LLModel::availableGPUDevices()
         device.index = vkDevice.index;
         device.type = vkDevice.type;
         device.heapSize = vkDevice.heapSize;
+        device.available = vkDevice.available;
         device.name = vkDevice.name;
         device.vendor = vkDevice.vendor;
+        device.unavail_reason = vkDevice.unavail_reason;
 
         devices.push_back(device);
     }
@@ -200,4 +202,18 @@ std::vector<LLModel::GPUDevice> LLModel::availableGPUDevices()
 #else
     return std::vector<LLModel::GPUDevice>();
 #endif
+}
+
+std::vector<LLModel::GPUDevice> LLModel::availableGPUDevices(size_t memoryRequired)
+{
+    auto devices = allGPUDevices(memoryRequired);
+    std::remove_if(devices.begin(), devices.end(), [](LLModel::GPUDevice &d) { return !d.available; });
+    return devices;
+}
+
+std::vector<LLModel::GPUDevice> LLModel::availableGPUDevices()
+{
+    auto devices = allGPUDevices();
+    std::remove_if(devices.begin(), devices.end(), [](LLModel::GPUDevice &d) { return !d.available; });
+    return devices;
 }

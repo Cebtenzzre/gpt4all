@@ -62,8 +62,10 @@ public:
         int index = 0;
         int type = 0;
         size_t heapSize = 0;
+        bool available = true;
         std::string name;
         std::string vendor;
+        std::string unavail_reason;
     };
 
     explicit LLModel() {}
@@ -95,13 +97,15 @@ public:
         return *m_implementation;
     }
 
-    virtual std::vector<GPUDevice> availableGPUDevices(size_t /*memoryRequired*/) { return std::vector<GPUDevice>(); }
+    virtual std::vector<GPUDevice> allGPUDevices(size_t /*memoryRequired*/) { return std::vector<GPUDevice>(); }
     virtual bool initializeGPUDevice(size_t /*memoryRequired*/, const std::string& /*device*/) { return false; }
     virtual bool initializeGPUDevice(const GPUDevice &/*device*/) { return false; }
     virtual bool initializeGPUDevice(int /*device*/) { return false; }
     virtual bool hasGPUDevice() { return false; }
     virtual bool usingGPUDevice() { return false; }
+    static std::vector<GPUDevice> allGPUDevices();
     static std::vector<GPUDevice> availableGPUDevices();
+    std::vector<GPUDevice> availableGPUDevices(size_t memoryRequired);
 
 protected:
     // These are pure virtual because subclasses need to implement as the default implementation of

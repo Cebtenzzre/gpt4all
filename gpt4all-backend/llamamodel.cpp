@@ -276,10 +276,10 @@ const std::vector<LLModel::Token> &LLamaModel::endTokens() const
 #include "ggml-vulkan.h"
 #endif
 
-std::vector<LLModel::GPUDevice> LLamaModel::availableGPUDevices(size_t memoryRequired)
+std::vector<LLModel::GPUDevice> LLamaModel::allGPUDevices(size_t memoryRequired)
 {
 #if defined(GGML_USE_KOMPUTE)
-    std::vector<ggml_vk_device> vkDevices = ggml_vk_available_devices(memoryRequired);
+    std::vector<ggml_vk_device> vkDevices = ggml_vk_all_devices(memoryRequired);
 
     std::vector<LLModel::GPUDevice> devices;
     for(const auto& vkDevice : vkDevices) {
@@ -287,8 +287,10 @@ std::vector<LLModel::GPUDevice> LLamaModel::availableGPUDevices(size_t memoryReq
         device.index = vkDevice.index;
         device.type = vkDevice.type;
         device.heapSize = vkDevice.heapSize;
+        device.available = vkDevice.available;
         device.name = vkDevice.name;
         device.vendor = vkDevice.vendor;
+        device.unavail_reason = vkDevice.unavail_reason;
 
         devices.push_back(device);
     }
